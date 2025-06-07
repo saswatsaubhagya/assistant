@@ -8,6 +8,8 @@ import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:convert';
+import '../widgets/chat_history_drawer.dart';
+import '../widgets/chat_input_row.dart';
 
 class ChatPage extends StatefulWidget {
   final String sessionId;
@@ -23,7 +25,7 @@ class ChatPageState extends State<ChatPage> {
   bool _isTyping = false;
 
   // Speech to text variables
-  SpeechToText _speechToText = SpeechToText();
+  final SpeechToText _speechToText = SpeechToText();
   bool _speechEnabled = false;
   String _lastWords = '';
 
@@ -123,9 +125,19 @@ class ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
+      drawer: ChatHistoryDrawer(
+        currentSessionId: widget.sessionId,
+        onSessionSelected: (sessionId) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => ChatPage(sessionId: sessionId)),
+          );
+        },
+      ),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: AppBar(
+          iconTheme: const IconThemeData(color: Colors.white),
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -142,6 +154,21 @@ class ChatPageState extends State<ChatPage> {
           centerTitle: true,
           elevation: 0,
           actions: [
+            IconButton(
+              icon: const Icon(Icons.add_comment, color: Colors.white),
+              tooltip: 'New Chat',
+              onPressed: () async {
+                await _saveSessionMessages();
+                final newSessionId = const Uuid().v4();
+                if (!context.mounted) return;
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChatPage(sessionId: newSessionId),
+                  ),
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.logout, color: Colors.white),
               tooltip: 'Logout',
@@ -202,84 +229,25 @@ class ChatPageState extends State<ChatPage> {
                       ),
                     ),
                     const Divider(height: 1),
-                    Container(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 12,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _controller,
-                              onSubmitted: sendMessage,
-                              minLines: 1,
-                              maxLines: 5,
-                              keyboardType: TextInputType.multiline,
-                              scrollPadding: const EdgeInsets.all(20),
-                              decoration: const InputDecoration(
-                                hintText: 'Send a message...',
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(
-                                  vertical: 10,
-                                ),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              _speechToText.isNotListening
-                                  ? Icons.mic_off
-                                  : Icons.mic,
-                              color: Colors.deepPurple,
-                            ),
-                            onPressed: _speechEnabled
-                                ? () {
-                                    if (_speechToText.isNotListening) {
-                                      _startListening();
-                                    } else {
-                                      _stopListening();
-                                    }
-                                  }
-                                : null,
-                          ),
-                          const SizedBox(width: 6),
-                          Material(
-                            color: const Color(0xFF8E2DE2),
-                            borderRadius: BorderRadius.circular(20),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: () {
-                                final text = _controller.text.trim();
-                                if (text.isNotEmpty) {
-                                  _controller.clear();
-                                  sendMessage(text);
-                                }
-                              },
-                              child: const Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Icon(Icons.send, color: Colors.white),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    ChatInputRow(
+                      controller: _controller,
+                      speechEnabled: _speechEnabled,
+                      isListening: _speechToText.isListening,
+                      onMicPressed: () {
+                        if (_speechToText.isNotListening) {
+                          _startListening();
+                        } else {
+                          _stopListening();
+                        }
+                      },
+                      onSendPressed: () {
+                        final text = _controller.text.trim();
+                        if (text.isNotEmpty) {
+                          _controller.clear();
+                          sendMessage(text);
+                        }
+                      },
+                      onSubmitted: sendMessage,
                     ),
                   ],
                 ),
@@ -287,34 +255,6 @@ class ChatPageState extends State<ChatPage> {
             ),
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF8E2DE2),
-        child: const Icon(Icons.add_comment, color: Colors.white),
-        tooltip: 'New Chat',
-        onPressed: () async {
-          // Save current chat to local storage
-          final prefs = await SharedPreferences.getInstance();
-          final history = prefs.getStringList('chatHistory') ?? [];
-          final sessionData = {
-            'sessionId': widget.sessionId,
-            'messages': _messages
-                .map((m) => {'text': m.text, 'isUser': m.isUser})
-                .toList(),
-          };
-          history.add(jsonEncode(sessionData));
-          await prefs.setStringList('chatHistory', history);
-
-          // Start new chat session
-          final newSessionId = const Uuid().v4();
-          if (!context.mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ChatPage(sessionId: newSessionId),
-            ),
-          );
-        },
       ),
     );
   }

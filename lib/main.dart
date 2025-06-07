@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/chat_page.dart';
 import 'screens/landing_screen.dart';
+import 'screens/new_chat_screen.dart';
 
 void main() => runApp(const ChatApp());
 
@@ -30,7 +31,7 @@ class ChatApp extends StatelessWidget {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          return snapshot.data! ? const ChatPage() : const LandingScreen();
+          return snapshot.data! ? const NewChatScreen() : const LandingScreen();
         },
       ),
     );
