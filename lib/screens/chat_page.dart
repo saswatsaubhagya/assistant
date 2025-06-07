@@ -6,9 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'landing_screen.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:uuid/uuid.dart';
+import 'dart:convert';
 
 class ChatPage extends StatefulWidget {
-  const ChatPage({super.key});
+  final String sessionId;
+  const ChatPage({super.key, required this.sessionId});
 
   @override
   ChatPageState createState() => ChatPageState();
@@ -28,6 +31,7 @@ class ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
     _initSpeech();
+    _loadSessionMessages();
   }
 
   void _initSpeech() async {
@@ -55,22 +59,62 @@ class ChatPageState extends State<ChatPage> {
     });
   }
 
+  Future<void> _loadSessionMessages() async {
+    final prefs = await SharedPreferences.getInstance();
+    final history = prefs.getStringList('chatHistory') ?? [];
+    final session = history
+        .map((e) => jsonDecode(e) as Map<String, dynamic>)
+        .firstWhere(
+          (s) => s['sessionId'] == widget.sessionId,
+          orElse: () => {},
+        );
+    if (session.isNotEmpty && session['messages'] != null) {
+      setState(() {
+        _messages.clear();
+        _messages.addAll(
+          (session['messages'] as List).map(
+            (m) => ChatMessage.fromJson(Map<String, dynamic>.from(m)),
+          ),
+        );
+      });
+    }
+  }
+
+  Future<void> _saveSessionMessages() async {
+    final prefs = await SharedPreferences.getInstance();
+    final history = prefs.getStringList('chatHistory') ?? [];
+    // Remove any previous session with this sessionId
+    final filtered = history.where((e) {
+      final s = jsonDecode(e) as Map<String, dynamic>;
+      return s['sessionId'] != widget.sessionId;
+    }).toList();
+    final sessionData = {
+      'sessionId': widget.sessionId,
+      'messages': _messages.map((m) => m.toJson()).toList(),
+    };
+    filtered.add(jsonEncode(sessionData));
+    await prefs.setStringList('chatHistory', filtered);
+  }
+
   Future<void> sendMessage(String message) async {
     setState(() {
       _messages.insert(0, ChatMessage(text: message, isUser: true));
       _isTyping = true;
     });
+    await _saveSessionMessages();
     try {
-      final reply = await ChatService.sendMessage(message);
+      final reply = await ChatService.sendMessage(message, widget.sessionId);
       setState(() {
         _messages.insert(0, ChatMessage(text: reply, isUser: false));
         _isTyping = false;
       });
+      await _saveSessionMessages();
     } catch (e) {
       setState(() {
         _messages.insert(0, ChatMessage(text: 'Error: $e', isUser: false));
         _isTyping = false;
       });
+      await _saveSessionMessages();
     }
     _controller.clear();
   }
@@ -243,6 +287,34 @@ class ChatPageState extends State<ChatPage> {
             ),
           ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF8E2DE2),
+        child: const Icon(Icons.add_comment, color: Colors.white),
+        tooltip: 'New Chat',
+        onPressed: () async {
+          // Save current chat to local storage
+          final prefs = await SharedPreferences.getInstance();
+          final history = prefs.getStringList('chatHistory') ?? [];
+          final sessionData = {
+            'sessionId': widget.sessionId,
+            'messages': _messages
+                .map((m) => {'text': m.text, 'isUser': m.isUser})
+                .toList(),
+          };
+          history.add(jsonEncode(sessionData));
+          await prefs.setStringList('chatHistory', history);
+
+          // Start new chat session
+          final newSessionId = const Uuid().v4();
+          if (!context.mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatPage(sessionId: newSessionId),
+            ),
+          );
+        },
       ),
     );
   }

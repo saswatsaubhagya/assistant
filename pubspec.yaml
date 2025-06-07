@@ -13,6 +13,7 @@ dependencies:
   http: ^1.4.0
   shared_preferences: ^2.5.3
   speech_to_text: ^7.0.0
+  uuid: ^4.3.3
 
 dev_dependencies:
   flutter_test:

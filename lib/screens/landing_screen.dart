@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'chat_page.dart';
+import 'new_chat_screen.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -28,7 +29,7 @@ class _LandingScreenState extends State<LandingScreen> {
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const ChatPage()),
+      MaterialPageRoute(builder: (_) => const NewChatScreen()),
     );
   }
 
