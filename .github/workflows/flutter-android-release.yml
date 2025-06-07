@@ -43,6 +43,6 @@ jobs:
           files: build/app/outputs/flutter-apk/app-release.apk
           title: 'Assistant Release'
           body: 'Release build for Assistant'
-          tag: 'v1.0.0'
+          tag_name: 'v1.0.0'
           draft: false
           prerelease: false
