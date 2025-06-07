@@ -1,0 +1,128 @@
+{
+  "name": "chat_bot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatbot",
+        "authentication": "basicAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b6b97ec0-513d-439f-a98f-11bc4eec9f2f",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -180,
+        -80
+      ],
+      "webhookId": "unique-webhook-id",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "bb478jD2VkpJpHQa",
+          "name": "simple saswat"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "6d2ac7e0-7cb9-4298-a788-52612e359e54",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.message }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        40,
+        -80
+      ],
+      "id": "768d0612-b68b-4465-b1fd-85096ffd33d1",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-preview-05-20",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        128,
+        140
+      ],
+      "id": "eec9b7bf-d309-459b-8ad4-de19c7952f3b",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "XDW2uXq8VPDVGDCn",
+          "name": "saswatsaubhagya"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "c60b2ea9-ef88-4776-9f86-1f0454eed4b3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "81138024e2a2e51dce1e5d96137e14d2824edcd4b38a0fcc792c401963ddcf21"
+  },
+  "id": "74BYutlL9rbGarWq",
+  "tags": []
+}
