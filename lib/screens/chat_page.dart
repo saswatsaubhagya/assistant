@@ -4,6 +4,8 @@ import '../services/chat_service.dart';
 import '../widgets/chat_message_bubble.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'landing_screen.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -16,6 +18,42 @@ class ChatPageState extends State<ChatPage> {
   final _messages = <ChatMessage>[];
   final _controller = TextEditingController();
   bool _isTyping = false;
+
+  // Speech to text variables
+  SpeechToText _speechToText = SpeechToText();
+  bool _speechEnabled = false;
+  String _lastWords = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _initSpeech();
+  }
+
+  void _initSpeech() async {
+    _speechEnabled = await _speechToText.initialize();
+    setState(() {});
+  }
+
+  void _startListening() async {
+    await _speechToText.listen(onResult: _onSpeechResult);
+    setState(() {});
+  }
+
+  void _stopListening() async {
+    await _speechToText.stop();
+    setState(() {});
+  }
+
+  void _onSpeechResult(SpeechRecognitionResult result) {
+    setState(() {
+      _lastWords = result.recognizedWords;
+      _controller.text = _lastWords;
+      _controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: _controller.text.length),
+      );
+    });
+  }
 
   Future<void> sendMessage(String message) async {
     setState(() {
@@ -146,6 +184,10 @@ class ChatPageState extends State<ChatPage> {
                             child: TextField(
                               controller: _controller,
                               onSubmitted: sendMessage,
+                              minLines: 1,
+                              maxLines: 5,
+                              keyboardType: TextInputType.multiline,
+                              scrollPadding: const EdgeInsets.all(20),
                               decoration: const InputDecoration(
                                 hintText: 'Send a message...',
                                 border: InputBorder.none,
@@ -155,6 +197,23 @@ class ChatPageState extends State<ChatPage> {
                                 ),
                               ),
                             ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              _speechToText.isNotListening
+                                  ? Icons.mic_off
+                                  : Icons.mic,
+                              color: Colors.deepPurple,
+                            ),
+                            onPressed: _speechEnabled
+                                ? () {
+                                    if (_speechToText.isNotListening) {
+                                      _startListening();
+                                    } else {
+                                      _stopListening();
+                                    }
+                                  }
+                                : null,
                           ),
                           const SizedBox(width: 6),
                           Material(

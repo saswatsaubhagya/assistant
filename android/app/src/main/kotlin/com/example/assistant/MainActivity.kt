@@ -1,4 +1,4 @@
-package com.example.assistant
+package com.kikpot.assistant
 
 import io.flutter.embedding.android.FlutterActivity
 
